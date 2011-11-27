@@ -4,7 +4,7 @@ Koans for Cascalog!
 
 ## Usage
 
-Clone the project and run `script/run`. This is inadequate, of course. More coming soon!
+Clone the project, `lein deps` and `script/run`. This is inadequate, of course. More coming soon!
 
 ## License
 
