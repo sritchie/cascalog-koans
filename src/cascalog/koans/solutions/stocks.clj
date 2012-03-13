@@ -1,4 +1,4 @@
-(ns cascalog.koans.stocks
+(ns cascalog.koans.solutions.stocks
   (:use cascalog.api
         [cascalog.koans.datastore :only (stock-tap)])
   (:require [cascalog.ops :as c]
