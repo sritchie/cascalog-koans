@@ -1,7 +1,7 @@
 (use 'cascalog.api
+     '[midje sweet cascalog]
+     '[cascalog.koans.util :only (dev-path)]
      '[cascalog.testing :only (test?-)]
-     '[cascalog.util :only (defalias)])
+     '[jackknife.def :only (defalias)])
 
 (defalias ?= test?-)
-
-
