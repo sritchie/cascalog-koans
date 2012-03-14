@@ -22,11 +22,12 @@
   "Adds `n` days to the supplied DateTime object."
   ([n dt] (time/minus dt (time/days n))))
 
+;; ### Challenge 1 Solution
+
 (defn trailing-drop-query
   "Returns a query that calculates the trailing change in stock price
   over the last `day-spread` days"
   [day-spread]
-  ;; select-fields works here because the tap has fields declared.
   (let [stock-src (select-fields stock-tap ["?stock-sym" "?date" "?adj"])]
     (<- [?sym ?date ?trailing-drop]
         (stock-src ?sym ?date-str ?adj-close)
@@ -36,18 +37,29 @@
         (- ?adj-close ?lag-adj-close :> ?trailing-drop)
         (:distinct false))))
 
+;; ### Challenge 2 Solution
+;;
+;; Note how grouping occurs, and that we needed to break off into
+;;another subquery.
+
 (defn max-drop-query
-  "Returns the maximum drop!"
+  "Returns a query that generates the maximum drop over all
+  periods (for each `day-spread` length window) for each stock
+  symbol."
   [day-spread]
   (let [src (trailing-drop-query day-spread)]
     (<- [?sym ?max-drop]
         (src ?sym ?date ?drop)
         (c/max ?drop :> ?max-drop))))
 
-;; More Depth with Aggregations
+;; ## Challenge 3 Solution: More Depth with Aggregations
 
 (defn average [coll]
-  (/ (reduce + coll) (count coll)))
+  (/ (reduce + coll)
+     (count coll)))
+
+;; This is a first try at `moving-average`, this time with an internal
+;; sort.
 
 (defbufferop [moving-average-sort [window]]
   [coll]
@@ -58,63 +70,84 @@
                [date prices]))
            (partition window 1 coll))]]))
 
-;; Can also do ths with a sliding window: http://www.learningclojure.com/2010/03/moving-average-of-list.html
+;; You can also implement the moving average using a sliding window:
+;; http://www.learningclojure.com/2010/03/moving-average-of-list.html
+;;
+;; Now, you might think that you need the following defmapcatop to
+;; transpose the result sequence:
 
 (defmapcatop transpose-coll [xs] xs)
 
-;; This is the naive way to do it, since we're sorting inside.
-
 (def moving-avg-query-sort
-  (<- [?sym ?end-date ?avg]
-      (stock-tap
-       ?exchange ?sym ?date-str ?open ?high ?low ?close ?volume ?adj)
-      (parse-date ?date-str :> ?date)
-      (moving-average-sort [30] ?date ?adj :> ?averages)
-      (transpose-coll ?averages :> ?end-date ?avg)))
+  (let [stock-src (select-fields stock-tap ["?stock-sym" "?date" "?adj"])]
+    (<- [?sym ?end-date ?avg]
+        (stock-src ?sym ?date-str ?adj)
+        (parse-date ?date-str :> ?date)
+        (moving-average-sort [30] ?date ?adj :> ?averages)
+        (transpose-coll ?averages :> ?end-date ?avg))))
 
-;; Let's try something a bit better:
+;; And indeed this does work fine. `defbufferop` has some interesting
+;; behavior, however; it functions a bit like a defmapcatop with its
+;; results in a way that `defaggregateop` can't. The following
+;; implementation drops the outer two vectors:
 
-(defbufferop [moving-average [window]]
+(defbufferop [moving-average-sort [window]]
   [coll]
-  [[(map (fn [xs]
+  (let [coll (sort-by first coll)]
+    (map (fn [xs]
            (let [date   (first (last xs))
                  prices (average (map second xs))]
              [date prices]))
-         (partition window 1 coll))]])
+         (partition window 1 coll))))
 
-;; This query handles the sorting by itself!
+;; Allowing the query to drop the defmapcatop:
+
+(def moving-avg-query-sort
+  (let [stock-src (select-fields stock-tap ["?stock-sym" "?date" "?adj"])]
+    (<- [?sym ?end-date ?avg]
+        (stock-src ?sym ?date-str ?adj)
+        (parse-date ?date-str :> ?date)
+        (moving-average-sort [30] ?date ?adj :> ?end-date ?avg))))
+
+;; Let's further optimize this query by allowing Hadoop to do the
+;; sorting for us:
+
+(defbufferop [moving-average [window]]
+  [coll]
+  (map (fn [xs]
+         (let [date   (first (last xs))
+               prices (average (map second xs))]
+           [date prices]))
+       (partition window 1 coll)))
+
+;; Notice the `:sort` option predicate:
 
 (def moving-avg-query
-  (<- [?sym ?end-date ?avg]
-      (stock-tap _ ?sym ?date-str ?open ?high ?low ?close ?volume ?adj)
-      (parse-date ?date-str :> ?date)
-      (moving-average [30] ?date ?adj :> ?averages)
-      (:sort ?date)
-      (transpose-coll ?averages :> ?end-date ?avg)))
+  (let [src (select-fields stock-tap ["?stock-sym" "?date" "?adj"])]
+    (<- [?sym ?end-date ?avg]
+        (stock-src ?sym ?date-str ?adj)
+        (parse-date ?date-str :> ?date)
+        (moving-average [30] ?date ?adj :> ?end-date ?avg)
+        (:sort ?date))))
 
-;; Separate the logic out into a predicate macro:
+;; Since the sort is always necessary, we can pull the
+;; `moving-average` function and the `:sort` clause out into a
+;; predicate macro:
 
 (defn moving-avg [window]
   (<- [?date ?val :> ?end-date ?avg]
       (:sort ?date)
-      (moving-average [window] ?date ?val :> ?averages)
-      (transpose-coll ?averages :> ?end-date ?avg)))
+      (moving-average [window] ?date ?val :> ?end-date ?avg)))
+
+;; This simplifies the logic of the actual query even further.
 
 (def moving-avg-query
-  (let [avg-op (moving-avg 30)]
+  (let [stock-src  (select-fields stock-tap ["?stock-sym" "?date" "?adj"])
+        avg-op     (moving-avg 30)]
     (<- [?sym ?end-date ?avg]
-        (stock-tap _ ?sym ?date-str ?open ?high ?low ?close ?volume ?adj)
+        (stock-src ?sym ?date-str ?adj)
         (parse-date ?date-str :> ?date)
         (avg-op ?date ?adj :> ?end-date ?avg))))
 
-;; We can calculate all sorts of arbitrary stats using Cascalog
-
-(def stock-stats-query
-  (<- [?sym ?average ?highest ?lowest ?max-spread]
-      (stock-tap _ ?sym ?date-str ?open ?high ?low ?close ?volume ?adj)
-      (parse-date ?date-str :> ?date)
-      (- ?high ?low :> ?spread)
-      (c/max ?spread :> ?max-spread)
-      (c/max ?high :> ?highest)
-      (c/min ?low :> ?lowest)
-      (c/avg ?adj :> ?average)))
+;; Note that we can use `avg-op` directly, even though it was
+;; dynamically generated. This is fine with predicate macros.

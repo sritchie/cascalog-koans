@@ -21,11 +21,26 @@
   "Adds `n` days to the supplied DateTime object."
   ([n dt] (time/minus dt (time/days n))))
 
-;; Challenge:
+;; ### Challenge 1
 ;;
 ;; write a query that calculates the change in stock price over each 5
 ;; day period.
 ;;
 ;; The result vector should be [?sym ?date ?trailing-drop]
+
+;; ### Challenge 2
 ;;
-;; Challenge 2: Calculate the maximum drop over that period.
+;; Calculate the maximum drop over that period.
+
+;; ### Challenge 3
+;;
+;; Calculate the moving average of the adjusted close
+;; price of each stock over successive 30 day windows. The result
+;; tuples should look like this:
+;;
+;; ["AA" <end-date-of-30-day-period> <avg-price-over-30-days>]
+;;
+;; There are 32 entries in the stock dataset, so you should end up
+;; with a result size of 3.
+
+

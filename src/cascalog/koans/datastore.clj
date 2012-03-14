@@ -12,7 +12,8 @@
 (def stock-tap
   (hfs-delimited (dev-path "yahoo_stock_AA_32_mini.csv")
                  :delimiter ","
-                 :outfields ["?exchange" "?stock-sym" "?date" "?open" "?high" "?low" "?close" "?volume" "?adj"]
+                 :outfields ["?exchange" "?stock-sym" "?date" "?open"
+                             "?high" "?low" "?close" "?volume" "?adj"]
                  :classes [String String String Float Float Float Float Integer Float]
                  :skip-header? true))
 

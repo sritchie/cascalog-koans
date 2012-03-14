@@ -71,7 +71,7 @@
       ["kumar"]]
      (<- [?person]
          (age ?person ?age)
-         __
+         (__)
          ))
 
  "Now fill in the missing predicate so that the query returns all
@@ -82,7 +82,7 @@
       ["kumar" 27]]
      (<- __
          (age ?person ?age)
-         __
+         (__)
          ))
 
  "The next query is a bit trickier. What could possibly go in this
@@ -110,7 +110,7 @@
  (?= [["alice"]]
      (<- [?person]
          (age ?person ?age)
-         __
+         (__)
          ))
 
  ;; ## Inner Joins
@@ -143,8 +143,8 @@
       ["luanne "3 "f"]
       ["chris" 40 "m"]]
      (<- [?person ?age ?gender]
-         __
-         __
+         (__)
+         (__)
          ))
 
  "Now write a query that produces ?age and ?gender for each person in
@@ -153,9 +153,9 @@
       ["gary"  28 "m"]
       ["chris" 40 "m"]]
      (<- [?person ?age ?gender]
-         __
-         __
-         __
+         (__)
+         (__)
+         (__)
          ))
  
  "Write a query that returns every pair from the follows dataset where
