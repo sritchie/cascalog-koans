@@ -42,5 +42,3 @@
 ;;
 ;; There are 32 entries in the stock dataset, so you should end up
 ;; with a result size of 3.
-
-

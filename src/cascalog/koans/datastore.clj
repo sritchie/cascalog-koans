@@ -38,3 +38,10 @@
         (parse-log-str ?line :>> log-fields)
         (:distinct false))))
 
+;; ## Timeseries dataset
+
+(def timeseries-src
+  (into [] (for [region ["IDN" "IND" "BRA" "USA"]
+                 period (range 20)
+                 :let [val (rand)]]
+             [region period val])))

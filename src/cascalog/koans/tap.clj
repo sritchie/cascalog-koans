@@ -4,7 +4,7 @@
         [cascalog.io :only (with-fs-tmp)])
   (:require [cascalog.tap :as tap]
             [cascalog.vars :as v])
-  (:import [cascading.scheme TextDelimited]
+  (:import [cascading.scheme.hadoop TextDelimited]
            [cascading.tuple Fields]))
 
 (defn delimited
