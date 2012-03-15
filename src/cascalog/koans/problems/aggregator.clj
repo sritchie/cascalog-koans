@@ -38,3 +38,18 @@
 ;; ["username" "gender"] ;; gender is "m" or "f"
 ;;
 ;; Implement the aggregation using defaggregateop and defparallelagg.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
